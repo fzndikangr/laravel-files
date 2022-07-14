@@ -1,5 +1,6 @@
 <?php
 
+use App\Task;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
@@ -21,7 +22,41 @@ use Illuminate\Http\Request;
 //     ]);
 // });
 
-Route::get('/azure-test/{file}', function ($file) {
+/**
+    * Show Task Dashboard
+    */
+    Route::get('/task', function () {
+        error_log("INFO: get /");
+        return view('tasks', [
+            'tasks' => Task::orderBy('created_at', 'asc')->get()
+        ]);
+    });
+
+
+/**
+    * Add New Task
+    */
+    Route::post('/task', function (Request $request) {
+        error_log("INFO: post /task");
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|max:255',
+        ]);
+    
+        if ($validator->fails()) {
+            error_log("ERROR: Add task failed.");
+            return redirect('/')
+                ->withInput()
+                ->withErrors($validator);
+        }
+    
+        $task = new Task;
+        $task->name = $request->name;
+        $task->save();
+    
+        return redirect('/');
+    });
+
+Route::get('/{file}', function ($file) {
     $filename = "$file";
 
     $disk = Storage::disk('azure');
@@ -36,7 +71,7 @@ Route::get('/azure-test/{file}', function ($file) {
     return response($contents)->header('content-Disposition','attachment');
 });
 
-Route::get('/azure-test', function() {
+Route::get('/', function() {
     $path = '';
 
     // Get the Larvel disk for Azure
@@ -67,7 +102,7 @@ Route::get('/azure-test', function() {
     }
 
     return view('tasks', [
-        'tasks' => $list
+        'files' => $list,'tasks' => Task::orderBy('created_at', 'asc')->get()
     ]);
 
     // $results = json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -75,7 +110,7 @@ Route::get('/azure-test', function() {
     // return response($results)->header('content-type', 'application/json');
 });
 
-Route::post('/task', function (Request $req) {
+Route::post('/task1', function (Request $req) {
     // error_log("INFO: post /task");
     // $validator = Validator::make($request->all(), [
     //     'name' => 'required|max:255',
@@ -87,6 +122,8 @@ Route::post('/task', function (Request $req) {
     //         ->withInput()
     //         ->withErrors($validator);
     // }
+    
+
 
     if($req->file()) {
         $fileName = time().'_'.$req->file->getClientOriginalName();
@@ -98,6 +135,16 @@ Route::post('/task', function (Request $req) {
 
     }
 
-    return redirect('/azure-test');
+    return redirect('/');
 });
+
+/**
+    * Delete Task
+    */
+    Route::delete('/task/{id}', function ($id) {
+        error_log('INFO: delete /task/'.$id);
+        Task::findOrFail($id)->delete();
+    
+        return redirect('/');
+    });
 
